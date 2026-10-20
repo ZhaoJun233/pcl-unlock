@@ -104,7 +104,6 @@ class Program
             Path.Combine(dir, ExeName),
             Path.Combine(Path.GetDirectoryName(dir) ?? dir, ExeName),
             Path.Combine(Environment.CurrentDirectory, ExeName),
-            Path.Combine(Path.GetDirectoryName(Environment.CurrentDirectory) ?? Environment.CurrentDirectory, ExeName),
         };
         foreach (var c in candidates)
         {
