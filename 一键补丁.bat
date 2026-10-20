@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
-title PCL 一键解锁补丁（快照版 / 社区版）
+title PCL 一键解锁补丁
 
 if not exist "%~dp0PclPatch.exe" (
     where curl >nul 2>nul
@@ -26,4 +26,5 @@ if not exist "%~dp0PclPatch.exe" (
 )
 
 "%~dp0PclPatch.exe" %*
+
 

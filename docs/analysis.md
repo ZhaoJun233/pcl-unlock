@@ -1,7 +1,7 @@
 # 逆向分析笔记
 
-目标：`Plain Craft Launcher 2.exe`，2.99.0.0（快照版 414），VB.NET / .NET Framework 4.8，
-665 个类型、6339 个方法，无混淆、无强名称。
+目标：启动器原版 `Plain Craft Launcher 2.exe`，VB.NET / .NET Framework 4.8，
+665 个类型、6339 个方法，无混淆、无强名称（按方法体特征匹配，不依赖版本号）。
 
 ## 1. 限制是怎么写的
 
@@ -131,3 +131,4 @@ call:
 补丁按方法体模式匹配（找 `ldstr "关闭下载"`、`ldstr "...不再提供 MC 下载功能..."`、
 `get_CardMinecraft` 后的 `ldc.i4.2`、`ToListItem` 调用点），换版本时如果方法体结构变了会
 抛 `pattern not found`，需要重新对照反汇编调整。
+

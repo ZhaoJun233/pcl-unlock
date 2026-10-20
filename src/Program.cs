@@ -34,23 +34,19 @@ class Program
     static readonly string[] KnownNames =
     {
         "Plain Craft Launcher 2.exe",
-        "PCL2_CE_Release_x64.exe",
-        "PCL2_CE_Release_ARM64.exe",
-        "PCL2-CE.exe",
-        "PCL2CE.exe",
     };
 
     static void OneClick(string arg)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.WriteLine("==============================================");
-        Console.WriteLine("  PCL 一键解锁补丁（快照版 / 社区版）");
+        Console.WriteLine("  PCL 一键解锁补丁");
         Console.WriteLine("==============================================");
 
         string target = ResolveTarget(arg);
         if (target == null)
         {
-            Console.WriteLine("[x] 没有找到启动器（Plain Craft Launcher 2.exe / PCL2_CE_*.exe）");
+            Console.WriteLine("[x] 没有找到启动器（Plain Craft Launcher 2.exe / PCL2*.exe）");
             Console.WriteLine("    请把本程序和启动器 exe 放在同一个文件夹，");
             Console.WriteLine("    或者把启动器 exe 拖到本程序 / 一键补丁.bat 上。");
             Pause();
@@ -68,7 +64,7 @@ class Program
             return;
         }
 
-        // 判断是哪种版本：2.99 快照版（可打补丁）/ 社区版（单文件打包，本身无限制）
+        // 判断目标：可打补丁的构建 / 单文件打包（本身无限制）
         ModuleDefMD probe;
         try
         {
@@ -76,7 +72,7 @@ class Program
         }
         catch (BadImageFormatException)
         {
-            Console.WriteLine("[✓] 这是单文件打包的版本（社区版/自包含版），本身没有 MC 下载限制。");
+            Console.WriteLine("[✓] 这是单文件打包的版本（自包含版），本身没有 MC 下载限制。");
             Console.WriteLine("    无需打补丁，直接启动即可。");
             Pause();
             return;
@@ -96,7 +92,7 @@ class Program
         }
         if (!restricted)
         {
-            Console.WriteLine("[✓] 没有发现 2.99 快照版的下载限制（社区版 / 旧版 / 已打过补丁）。");
+            Console.WriteLine("[✓] 没有发现下载限制（旧版 / 已打过补丁 / 其它构建）。");
             Console.WriteLine("    无需处理，直接启动即可。");
             Pause();
             return;
@@ -119,7 +115,7 @@ class Program
         {
             if (File.Exists(tmp)) File.Delete(tmp);
             Console.WriteLine("[x] 补丁失败: " + ex.Message);
-            Console.WriteLine("    可能原因：不是 2.99.0.0 (414) 原版，或者已经打过补丁。");
+            Console.WriteLine("    可能原因：不是结构匹配的原版，或者已经打过补丁。");
             Console.WriteLine("    已备份的文件可原样覆盖回去。");
             Pause();
             Environment.ExitCode = 1;
@@ -134,7 +130,7 @@ class Program
 
     static bool IsRestricted(ModuleDefMD mod)
     {
-        // 2.99 快照版的特征：PageDownloadInstall.LoaderInit 里带一个名为「关闭下载」的 LoaderTask
+        // 受限构建的特征：PageDownloadInstall.LoaderInit 里带一个名为「关闭下载」的 LoaderTask
         var t = mod.GetTypes().FirstOrDefault(x => x.FullName == "PCL.PageDownloadInstall");
         if (t == null) return false;
         var m = t.Methods.FirstOrDefault(x => x.Name == "LoaderInit" && x.HasBody);
@@ -178,7 +174,7 @@ class Program
             }
             try
             {
-                var hit = Directory.GetFiles(d, "PCL2_CE*.exe").FirstOrDefault()
+                var hit = Directory.GetFiles(d, "PCL2*.exe").FirstOrDefault()
                        ?? Directory.GetFiles(d, "Plain Craft Launcher*.exe").FirstOrDefault();
                 if (hit != null) return Path.GetFullPath(hit);
             }
@@ -363,6 +359,7 @@ class Program
         DumpMethod(m2);
     }
 }
+
 
 
 

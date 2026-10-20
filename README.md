@@ -46,7 +46,7 @@ PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanc
 | 目标 | 行为 |
 | --- | --- |
 | 含限制代码的构建 | 打 4 处补丁（先自动备份） |
-| 不含限制的构建（社区版 / 自编译 / 已打过补丁） | 提示「无需处理」后退出，不改文件 |
+| 不含限制的构建（自编译 / 已打过补丁 / 其它构建） | 提示「无需处理」后退出，不改文件 |
 | 单文件打包的构建 | 提示「本身没有限制」后退出，不改文件 |
 | 结构不匹配 | 报错退出，原文件保持不动 |
 
@@ -66,10 +66,10 @@ PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanc
 [4/4] 完成！启动器已解锁（原版备份见 PCL\PatchBackup）。
 ```
 
-已经在别处打过补丁、或者本来就是社区版时，会看到：
+已经在别处打过补丁、或者该构建本来就没有限制时，会看到：
 
 ```
-[✓] 没有发现下载限制（社区版 / 旧版 / 已打过补丁）。
+[✓] 没有发现下载限制（旧版 / 已打过补丁 / 其它构建）。
     无需处理，直接启动即可。
 ```
 
@@ -112,3 +112,4 @@ PclPatch.exe stats    <exe>                              # 结构统计
 ## License
 
 MIT
+
