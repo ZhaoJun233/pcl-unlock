@@ -39,7 +39,7 @@ PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanc
 
 ## 一键使用（推荐）
 
-1. 从 [Release](https://github.com/ZhaoJun233/pcl-unlock/releases/latest) 下载 **`一键补丁.bat`**（2 KB）。
+1. 从 [Release](https://github.com/ZhaoJun233/pcl-unlock/releases/latest) 下载 **`oneclick-patch.bat`**（2 KB；仓库根目录的 `一键补丁.bat` 是同一份，GitHub 附件名不支持中文所以 Release 里用了英文名）。
    `PclPatch.exe` 如果不在旁边，bat 会自动从 Release 下载。
 2. 关掉 PCL，把 `一键补丁.bat` 放到 `Plain Craft Launcher 2.exe` 同目录，双击。
    （也可以直接把启动器 exe 拖到 bat 上。）
@@ -107,3 +107,4 @@ PclPatch.exe stats    <exe>                         # 结构统计
 ## License
 
 MIT
+
