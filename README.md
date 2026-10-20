@@ -37,7 +37,28 @@ PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanc
 
 `PCL.FormMain::FileDrag` 里那条异常提示判断因为不再命中，无需改动；无参的 `ModpackInstall()` 本来就没有调用者。
 
-## 用法
+## 一键使用（推荐）
+
+1. 从 [Release](https://github.com/ZhaoJun233/pcl-unlock/releases/latest) 下载 **`一键补丁.bat`**（2 KB）。
+   `PclPatch.exe` 如果不在旁边，bat 会自动从 Release 下载。
+2. 关掉 PCL，把 `一键补丁.bat` 放到 `Plain Craft Launcher 2.exe` 同目录，双击。
+   （也可以直接把启动器 exe 拖到 bat 上。）
+3. 看到 `[4/4] 完成！` 就好了，原版自动备份在 `PCL\PatchBackup\`。
+
+```
+[1/4] 目标: D:\Games\PCL\Plain Craft Launcher 2.exe
+[2/4] 已备份: D:\Games\PCL\PCL\PatchBackup\Plain Craft Launcher 2.exe.original.20261020_171408
+[3/4] 正在打补丁...
+[A] LoaderInit -> DlClientListLoader
+[C] CardMinecraft.Visibility -> Visible
+[D] install button branch restored
+[B] modpack dispatch restored (helper added)
+[4/4] 完成！启动器已解锁（原版备份见 PCL\PatchBackup）。
+```
+
+回退：把 `PCL\PatchBackup\` 里的 `.original.*` 改名回 `Plain Craft Launcher 2.exe` 覆盖即可。
+
+## 命令行用法
 
 **直接下 Release 里的 `PclPatch.exe`**（self-contained 单文件，win-x64，不需要装 .NET）：
 
@@ -68,6 +89,8 @@ src\bin\Release\net10.0\PclPatch.exe patchall "Plain Craft Launcher 2.exe" "out.
 其它模式（调试用）：
 
 ```
+PclPatch.exe                                       # 一键模式：自动找同目录/上级目录的启动器
+PclPatch.exe "D:\Games\PCL\Plain Craft Launcher 2.exe"  # 一键模式 + 指定目标
 PclPatch.exe il       <exe> <类型正则> [方法正则]   # 反汇编
 PclPatch.exe findstr  <exe> <字符串>                # 找包含某字符串的方法
 PclPatch.exe findcall <exe> <正则>                  # 找调用了某方法的签名
