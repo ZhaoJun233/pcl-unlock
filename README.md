@@ -39,14 +39,31 @@ PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanc
 
 ## 用法
 
+**直接下 Release 里的 `PclPatch.exe`**（self-contained 单文件，win-x64，不需要装 .NET）：
+
+```powershell
+PclPatch.exe patchall "Plain Craft Launcher 2.exe" "Plain Craft Launcher 2.patched.exe"
+```
+
+从源码构建：
+
 ```powershell
 dotnet build src -c Release
-src\bin\Release\net10.0\PclPatch.exe patchall "Plain Craft Launcher 2.exe" "Plain Craft Launcher 2.patched.exe"
+src\bin\Release\net10.0\PclPatch.exe patchall "Plain Craft Launcher 2.exe" "out.exe"
+```
+
+输出应包含 4 行：
+
+```
+[A] LoaderInit -> DlClientListLoader
+[C] CardMinecraft.Visibility -> Visible
+[D] install button branch restored
+[B] modpack dispatch restored (helper added)
 ```
 
 - 输入必须是 **2.99.0.0 (414)** 的原版 exe，其它版本方法体布局不同，补丁会直接报错（pattern not found）。
 - 输出文件改名为 `Plain Craft Launcher 2.exe` 覆盖回去即可；**覆盖前务必备份原版**。
-- 补丁只做 IL 层面的重接线，不改动任何资源，也不联网。
+- 补丁只做 IL 层面的重接线，不改动任何资源，也不联网；对同一份原版 exe 的输出是确定性的（可复现字节级一致的产物）。
 
 其它模式（调试用）：
 
