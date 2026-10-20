@@ -9,6 +9,7 @@ class Program
 {
     static void Main(string[] args)
     {
+        if (args.Length == 0) { OneClick(null); return; }
         string mode = args[0];
         switch (mode)
         {
@@ -21,8 +22,103 @@ class Program
             case "sig": Sig(args[1], args[2], args.Length > 3 ? args[3] : null); break;
             case "types": Types(args[1], args[2]); break;
             case "findcall": FindCall(args[1], args[2]); break;
-            default: Console.WriteLine("unknown mode"); break;
+            default:
+                // 不是已知子命令时，把参数当成目标路径，走一键模式
+                OneClick(mode);
+                break;
         }
+    }
+
+    // ---------- 一键补丁 ----------
+    const string ExeName = "Plain Craft Launcher 2.exe";
+
+    static void OneClick(string arg)
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.WriteLine("==============================================");
+        Console.WriteLine("  PCL 2.99 一键解锁补丁");
+        Console.WriteLine("==============================================");
+
+        string target = ResolveTarget(arg);
+        if (target == null)
+        {
+            Console.WriteLine("[x] 没有找到 " + ExeName);
+            Console.WriteLine("    请把本程序和「" + ExeName + "」放在同一个文件夹，");
+            Console.WriteLine("    或者把启动器 exe 拖到本程序 / 一键补丁.bat 上。");
+            Pause();
+            Environment.ExitCode = 1;
+            return;
+        }
+        Console.WriteLine("[1/4] 目标: " + target);
+
+        var running = System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ExeName));
+        if (running.Length > 0)
+        {
+            Console.WriteLine("[x] PCL 正在运行，请先完全退出启动器再试。");
+            Pause();
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        string root = Path.GetDirectoryName(target);
+        string backupDir = Path.Combine(root, "PCL", "PatchBackup");
+        Directory.CreateDirectory(backupDir);
+        string backup = Path.Combine(backupDir, ExeName + ".original." + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        File.Copy(target, backup, true);
+        Console.WriteLine("[2/4] 已备份: " + backup);
+
+        string tmp = Path.Combine(root, ".pcl-unlock.tmp.exe");
+        Console.WriteLine("[3/4] 正在打补丁...");
+        try
+        {
+            PatchAll.Run(target, tmp);
+        }
+        catch (Exception ex)
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+            Console.WriteLine("[x] 补丁失败: " + ex.Message);
+            Console.WriteLine("    可能原因：不是 2.99.0.0 (414) 原版，或者已经打过补丁。");
+            Console.WriteLine("    已备份的文件可原样覆盖回去。");
+            Pause();
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        File.Delete(target);
+        File.Move(tmp, target);
+        Console.WriteLine("[4/4] 完成！启动器已解锁（原版备份见 PCL\\PatchBackup）。");
+        Pause();
+    }
+
+    static string ResolveTarget(string arg)
+    {
+        if (!string.IsNullOrWhiteSpace(arg))
+        {
+            string p = arg.Trim('"');
+            if (Directory.Exists(p)) p = Path.Combine(p, ExeName);
+            if (File.Exists(p)) return Path.GetFullPath(p);
+        }
+        string dir = AppContext.BaseDirectory.TrimEnd('\\');
+        string[] candidates =
+        {
+            Path.Combine(dir, ExeName),
+            Path.Combine(Path.GetDirectoryName(dir) ?? dir, ExeName),
+            Path.Combine(Environment.CurrentDirectory, ExeName),
+            Path.Combine(Path.GetDirectoryName(Environment.CurrentDirectory) ?? Environment.CurrentDirectory, ExeName),
+        };
+        foreach (var c in candidates)
+        {
+            try { if (File.Exists(c)) return Path.GetFullPath(c); } catch { }
+        }
+        return null;
+    }
+
+    static void Pause()
+    {
+        if (Console.IsInputRedirected) return;
+        Console.WriteLine();
+        Console.Write("按回车键退出...");
+        try { Console.ReadLine(); } catch { }
     }
 
     static void FindCall(string path, string pattern)
