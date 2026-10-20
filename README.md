@@ -1,0 +1,69 @@
+# pcl-unlock
+
+把 **PCL 2.99.0.0（快照版 414）** 里被编译期删掉的「MC 下载 / 整合包安装」相关代码，用 dnlib 重新接回去的补丁工具。
+
+> 仅供个人学习与自用。修改后的启动器请勿二次分发；PCL 的版权归其作者所有。
+
+## 背景
+
+PCL 2.99.0.0 在源码里用编译期常量关闭了 MC 下载：
+
+```vb
+' Modules/ModSecret.vb
+Public Const RestrictMcDownload As Boolean = True
+```
+
+因为它是 `Const`，**会内联进每一个引用点**。编译后受限分支只剩「报错」那一条，另一条分支的代码被编译器整段删除——所以改配置没用，只能改 IL。
+
+## 恢复的 4 处
+
+| # | 方法 | 改动 |
+| --- | --- | --- |
+| 1 | `PCL.PageDownloadInstall::LoaderInit` | 「抛异常的空任务」→ 真实加载器 `PCL.ModDownload::DlClientListLoader`（下载 → 原版游戏） |
+| 2 | `PCL.ModModpack::ModpackInstall(String, String, String)` | 无条件 `throw` → 调用新增的 `InstallPackByType`，按 PackType 分发 CurseForge / HMCL / MMC / MCBBS / Modrinth / 带启动器压缩包 / 普通压缩包 |
+| 3 | `PCL.PageDownloadModify::LoadInstanceFinished` | `CardMinecraft.Visibility` 由 `Collapsed`(2) 改回 `Visible`(0) |
+| 4 | `PCL.PageDownloadResourceDetail::InitializeStackResourceVersions` | 重建 `TargetResourceType = ModPack` 分支：整合包版本列表恢复「安装」入口 |
+
+外加新增方法：
+
+```
+PCL.ModModpack::InstallPackByType(String file, String baseFolder, String instanceName, String logo, Int32 packType)
+    A = OpenZip(file)
+    switch packType: 0→InstallPackCurseForge 1→InstallPackHMCL 2→InstallPackMMC
+                     3→InstallPackMCBBS 4→InstallPackModrinth 9→InstallPackLauncherPack
+                     else→InstallPackCompress
+    A.Dispose(); return
+```
+
+`PCL.FormMain::FileDrag` 里那条异常提示判断因为不再命中，无需改动；无参的 `ModpackInstall()` 本来就没有调用者。
+
+## 用法
+
+```powershell
+dotnet build src -c Release
+src\bin\Release\net10.0\PclPatch.exe patchall "Plain Craft Launcher 2.exe" "Plain Craft Launcher 2.patched.exe"
+```
+
+- 输入必须是 **2.99.0.0 (414)** 的原版 exe，其它版本方法体布局不同，补丁会直接报错（pattern not found）。
+- 输出文件改名为 `Plain Craft Launcher 2.exe` 覆盖回去即可；**覆盖前务必备份原版**。
+- 补丁只做 IL 层面的重接线，不改动任何资源，也不联网。
+
+其它模式（调试用）：
+
+```
+PclPatch.exe il       <exe> <类型正则> [方法正则]   # 反汇编
+PclPatch.exe findstr  <exe> <字符串>                # 找包含某字符串的方法
+PclPatch.exe findcall <exe> <正则>                  # 找调用了某方法的签名
+PclPatch.exe types    <exe> <正则>                  # 列类型
+PclPatch.exe stats    <exe>                         # 结构统计
+```
+
+## 注意
+
+- PCL 的自动更新会覆盖补丁，更新后需要重新打一次。
+- 整合包安装那条是**重新接线**的（原逻辑被编译器删除），属于重建而非还原，遇到某类整合包安装异常请先回退再反馈。
+- 仅在自己拥有 / 有权修改的启动器上使用。
+
+## License
+
+MIT
