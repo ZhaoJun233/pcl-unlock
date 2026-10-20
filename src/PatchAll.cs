@@ -11,12 +11,41 @@ static class PatchAll
         var mod = ModuleDefMD.Load(inPath);
         var types = mod.GetTypes().ToList();
 
+        PatchLoaderInit(types);
         PatchModifyCard(types);
         PatchResourceInstall(types);
         PatchModpackInstall(types);
 
         mod.Write(outPath);
         Console.WriteLine("written " + outPath);
+    }
+
+    // ---------- A: 下载页的 LoaderInit ----------
+    static void PatchLoaderInit(List<TypeDef> types)
+    {
+        var t = types.First(x => x.FullName == "PCL.PageDownloadInstall");
+        var m = t.Methods.First(x => x.Name == "LoaderInit" && x.HasBody);
+        var md = types.First(x => x.FullName == "PCL.ModDownload");
+        var field = md.Fields.First(f => f.Name == "DlClientListLoader");
+        var ins = m.Body.Instructions;
+
+        int start = -1, end = -1;
+        for (int i = 0; i < ins.Count; i++)
+        {
+            if (start < 0 && ins[i].OpCode.Code == Code.Ldstr && (ins[i].Operand as string) == "关闭下载")
+                start = i;
+            if (start >= 0 && ins[i].OpCode.Code == Code.Newobj && ins[i].Operand is IMethod nm &&
+                nm.DeclaringType?.Name?.StartsWith("LoaderTask`2") == true)
+            {
+                end = i;
+                break;
+            }
+        }
+        if (start < 0 || end < 0) throw new Exception("[A] pattern not found (already patched?)");
+
+        for (int k = end; k >= start; k--) ins.RemoveAt(k);
+        ins.Insert(start, Instruction.Create(OpCodes.Ldsfld, field));
+        Console.WriteLine("[A] LoaderInit -> DlClientListLoader");
     }
 
     // ---------- C: 修改版本页的 Minecraft 卡片 ----------
