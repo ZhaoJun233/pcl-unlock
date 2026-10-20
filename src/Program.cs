@@ -31,19 +31,27 @@ class Program
 
     // ---------- 一键补丁 ----------
     const string ExeName = "Plain Craft Launcher 2.exe";
+    static readonly string[] KnownNames =
+    {
+        "Plain Craft Launcher 2.exe",
+        "PCL2_CE_Release_x64.exe",
+        "PCL2_CE_Release_ARM64.exe",
+        "PCL2-CE.exe",
+        "PCL2CE.exe",
+    };
 
     static void OneClick(string arg)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.WriteLine("==============================================");
-        Console.WriteLine("  PCL 2.99 一键解锁补丁");
+        Console.WriteLine("  PCL 一键解锁补丁（快照版 / 社区版）");
         Console.WriteLine("==============================================");
 
         string target = ResolveTarget(arg);
         if (target == null)
         {
-            Console.WriteLine("[x] 没有找到 " + ExeName);
-            Console.WriteLine("    请把本程序和「" + ExeName + "」放在同一个文件夹，");
+            Console.WriteLine("[x] 没有找到启动器（Plain Craft Launcher 2.exe / PCL2_CE_*.exe）");
+            Console.WriteLine("    请把本程序和启动器 exe 放在同一个文件夹，");
             Console.WriteLine("    或者把启动器 exe 拖到本程序 / 一键补丁.bat 上。");
             Pause();
             Environment.ExitCode = 1;
@@ -51,19 +59,53 @@ class Program
         }
         Console.WriteLine("[1/4] 目标: " + target);
 
-        var running = System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ExeName));
+        var running = System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(target));
         if (running.Length > 0)
         {
-            Console.WriteLine("[x] PCL 正在运行，请先完全退出启动器再试。");
+            Console.WriteLine("[x] 启动器正在运行，请先完全退出再试。");
             Pause();
             Environment.ExitCode = 1;
+            return;
+        }
+
+        // 判断是哪种版本：2.99 快照版（可打补丁）/ 社区版（单文件打包，本身无限制）
+        ModuleDefMD probe;
+        try
+        {
+            probe = ModuleDefMD.Load(target);
+        }
+        catch (BadImageFormatException)
+        {
+            Console.WriteLine("[✓] 这是单文件打包的版本（社区版/自包含版），本身没有 MC 下载限制。");
+            Console.WriteLine("    无需打补丁，直接启动即可。");
+            Pause();
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[x] 无法读取该文件: " + ex.Message);
+            Pause();
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        bool restricted;
+        using (probe)
+        {
+            restricted = IsRestricted(probe);
+        }
+        if (!restricted)
+        {
+            Console.WriteLine("[✓] 没有发现 2.99 快照版的下载限制（社区版 / 旧版 / 已打过补丁）。");
+            Console.WriteLine("    无需处理，直接启动即可。");
+            Pause();
             return;
         }
 
         string root = Path.GetDirectoryName(target);
         string backupDir = Path.Combine(root, "PCL", "PatchBackup");
         Directory.CreateDirectory(backupDir);
-        string backup = Path.Combine(backupDir, ExeName + ".original." + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        string backup = Path.Combine(backupDir, Path.GetFileName(target) + ".original." + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
         File.Copy(target, backup, true);
         Console.WriteLine("[2/4] 已备份: " + backup);
 
@@ -90,24 +132,57 @@ class Program
         Pause();
     }
 
+    static bool IsRestricted(ModuleDefMD mod)
+    {
+        // 2.99 快照版的特征：PageDownloadInstall.LoaderInit 里带一个名为「关闭下载」的 LoaderTask
+        var t = mod.GetTypes().FirstOrDefault(x => x.FullName == "PCL.PageDownloadInstall");
+        if (t == null) return false;
+        var m = t.Methods.FirstOrDefault(x => x.Name == "LoaderInit" && x.HasBody);
+        if (m == null) return false;
+        return m.Body.Instructions.Any(i => i.OpCode.Code == Code.Ldstr && (i.Operand as string) == "关闭下载");
+    }
+
     static string ResolveTarget(string arg)
     {
         if (!string.IsNullOrWhiteSpace(arg))
         {
             string p = arg.Trim('"');
-            if (Directory.Exists(p)) p = Path.Combine(p, ExeName);
+            if (Directory.Exists(p))
+            {
+                foreach (var n in KnownNames)
+                {
+                    string c = Path.Combine(p, n);
+                    if (File.Exists(c)) return Path.GetFullPath(c);
+                }
+                try
+                {
+                    var g = Directory.GetFiles(p, "*.exe")
+                        .Where(f => Path.GetFileName(f).StartsWith("Plain Craft Launcher", StringComparison.OrdinalIgnoreCase)
+                                 || Path.GetFileName(f).StartsWith("PCL2", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    if (g.Count == 1) return Path.GetFullPath(g[0]);
+                }
+                catch { }
+            }
             if (File.Exists(p)) return Path.GetFullPath(p);
         }
+
         string dir = AppContext.BaseDirectory.TrimEnd('\\');
-        string[] candidates =
+        foreach (var d in new[] { dir, Path.GetDirectoryName(dir) ?? dir, Environment.CurrentDirectory })
         {
-            Path.Combine(dir, ExeName),
-            Path.Combine(Path.GetDirectoryName(dir) ?? dir, ExeName),
-            Path.Combine(Environment.CurrentDirectory, ExeName),
-        };
-        foreach (var c in candidates)
-        {
-            try { if (File.Exists(c)) return Path.GetFullPath(c); } catch { }
+            if (string.IsNullOrEmpty(d) || !Directory.Exists(d)) continue;
+            foreach (var n in KnownNames)
+            {
+                string c = Path.Combine(d, n);
+                if (File.Exists(c)) return Path.GetFullPath(c);
+            }
+            try
+            {
+                var hit = Directory.GetFiles(d, "PCL2_CE*.exe").FirstOrDefault()
+                       ?? Directory.GetFiles(d, "Plain Craft Launcher*.exe").FirstOrDefault();
+                if (hit != null) return Path.GetFullPath(hit);
+            }
+            catch { }
         }
         return null;
     }
